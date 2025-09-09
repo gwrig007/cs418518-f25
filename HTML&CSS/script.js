@@ -45,15 +45,15 @@
 
 // ******Import Export********
 
-export let aiken = "asasasasasas";
-import { apiKey1 } from "./util.js";
-console.log(apiKey1);
-console.log(aiken);
+// export let aiken = "asasasasasas";
+// import { apiKey1 } from "./util.js";
+// console.log(apiKey1);
+// console.log(aiken);
 
 
 //**************Ternary Operator */
 
 
-// let age=30;
-// let checkage=age>=33 ? true :false;
-// console.log(checkage)
+let age=30;
+let checkage=age>=33 ? true :false;
+console.log(checkage)
