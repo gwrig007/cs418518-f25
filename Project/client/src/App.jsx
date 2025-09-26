@@ -1,18 +1,23 @@
-import { useState } from 'react'
-import './App.css'
-import Image from './Image'
-import UserInfo from './UserInfo'
+import './App.css';
+import Dashboard from './Dashboard';
+import Login from './Login';
 
-
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 function App() {
-  const [count, setCount] = useState(0)
+  // const [count, setCount] = useState(0)
 
 
   function Handler(){}
 
   return (
     <>
-     <Image></Image>
+     <Router>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </Router>
+     {/* <Image></Image>
       <h1>Vite + React</h1>
       <div className="card">
         <button onClick={() => setCount((count) => count + 1)}>
@@ -28,7 +33,7 @@ function App() {
 
       <UserInfo name='Nasreen Arif' designation='Lecturer'><p>I will teach CS418 course</p></UserInfo>
       <UserInfo name='Siam' designation='Test'><p>Siam is taking CS418 course in Fall 2025</p></UserInfo>
-      <UserInfo name='Grace' designation='Test2'></UserInfo>
+      <UserInfo name='Grace' designation='Test2'></UserInfo> */}
     </>
   )
 }
