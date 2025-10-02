@@ -1,9 +1,145 @@
-img{
-    width: 50px;
-    border-radius: 50px;
-    float: left;
-    margin-right: 10px;
+/* ---------------------------
+   Global Styles
+---------------------------- */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f8f9fa;
+  color: #333;
 }
-#course-name{
-    font-weight: bold;
+
+h1, h2 {
+  color: #041E42; /* ODU dark navy */
+  margin-bottom: 10px;
+}
+
+a {
+  color: #00539B; /* ODU blue */
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ---------------------------
+   Header & Navigation
+---------------------------- */
+header {
+  background-color: #041E42; /* ODU navy blue */
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+header h2 {
+  margin: 5px 0 15px;
+  font-size: 18px;
+  font-weight: normal;
+  color: #F0C808; /* ODU gold */
+}
+
+nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+nav ul li {
+  display: inline;
+  margin: 0 15px;
+}
+
+nav ul li a {
+  color: #F0C808; /* gold nav links */
+  font-weight: bold;
+  transition: color 0.3s ease;
+}
+
+nav ul li a:hover {
+  color: #ffffff;
+}
+
+/* ---------------------------
+   Main Content
+---------------------------- */
+main {
+  padding: 20px;
+  max-width: 900px;
+  margin: auto;
+}
+
+section {
+  margin: 40px 0;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Quick Links */
+#quick-links ul {
+  list-style: none;
+  padding: 0;
+}
+
+#quick-links li {
+  margin: 10px 0;
+}
+
+#quick-links a {
+  color: #00539B;
+  font-weight: bold;
+}
+
+/* ---------------------------
+   Login Form
+---------------------------- */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 300px;
+  margin: auto;
+}
+
+input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+button {
+  padding: 10px;
+  background-color: #00539B;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #003f73;
+}
+
+/* ---------------------------
+   Footer
+---------------------------- */
+footer {
+  background-color: #041E42;
+  color: white;
+  text-align: center;
+  padding: 10px;
+  position: fixed;
+  width: 100%;
+  bottom: 0;
+  font-size: 14px;
 }
