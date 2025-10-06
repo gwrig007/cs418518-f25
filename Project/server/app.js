@@ -1,71 +1,52 @@
-import bodyParser from "body-parser";
 import express from "express";
+import cors from "cors";
+import bodyParser from "body-parser";
 import user from "./route/user.js";
+
 const app = express();
 const port = 8080;
 
+// ✅ Start server
 app.listen(port, () => {
-  console.log(`server is listening at port ${port}`);
+  console.log(`Server is listening at port ${port}`);
 });
 
+// ✅ Middleware example
 const myLogger = function (req, res, next) {
   console.log("Calling middleware function");
   next();
 };
 app.use(myLogger);
+
+// ✅ Enable CORS for your frontend
 app.use(
   cors({
-    origin: "http://localhost:5173",
-    //////////// Optional
+    origin: "http://localhost:5173", // frontend origin
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type"],
   })
 );
+
+// ✅ Parse incoming JSON
 app.use(bodyParser.json());
-//middleware for user route
+
+// ✅ Use your user route (make sure route/user.js exists)
 app.use("/user", user);
 
+// ✅ Example base route
 app.get("/", (req, res) => {
-  ////write logic
-  //response json
-  // res.json({
-  //     status:200,
-  //     message:"Response from get api"
-  // })
-
-  //response send
-  res.send("Response from get api");
+  res.send("Response from GET API");
 });
 
-// app.put('/user',(req,res)=>{
-//     ////write logic
-//     //response json
-//     res.json({
-//         status:200,
-//         message:"Response from put api"
-//     })
-// })
-
+// ✅ Example route handling all HTTP methods
 app.all("/test", (req, res) => {
-  ////write logic
-  //response json
   res.json({
     status: 200,
-    message: "Response from all api",
+    message: "Response from ALL API",
   });
 });
 
-// app.get('/user/:userid',(req,res)=>{
-//     ////write logic
-
-//     //response json
-//     res.json({
-//         status:200,
-//         message:"Response from get api",
-//         id:req.params.userid
-//     })
-// })
-
+// ✅ Just a console test
 const a = 30;
 console.log(a);
 
