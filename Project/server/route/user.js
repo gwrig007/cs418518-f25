@@ -1,121 +1,204 @@
 import { Router } from "express";
 import { connection } from "../database/connection.js";
+import nodemailer from "nodemailer";
+import bcrypt from "bcrypt";
+
 const user = Router();
 
-user.get("/", (req, res) => {
-  ////write logic
-  connection.execute("select * from user_info", function (err, result) {
-    if (err) {
-      return res.json({ message: err.message });
-    }
-    // response json
-    res.json({
-      status: 200,
-      message: "Response from get api",
-      result: result,
-    });
-  });
+// ✅ Set up email transporter ONCE
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER, // your Gmail address
+    pass: process.env.EMAIL_PASS, // app password
+  },
 });
 
-user.get("/:id", (req, res) => {
-  ////write logic
-  // response json
-  res.json({
-    status: 200,
-    message: "Response from get api",
-    id: req.params.id,
-  });
-});
+// ✅ REGISTER (sign-up)
+user.post("/register", async (req, res) => {
+  const { firstName, lastName, email, password } = req.body;
 
-//API with multiple parameters
-user.get("/:user/:postId", (req, res) => {
-  res.json({
-    status: 200,
-    message: "Response from GET API",
-    userId: req.params.user,
-    postId: req.params.postId,
-  });
-});
+  if (!firstName || !lastName || !email || !password) {
+    return res.status(400).json({ message: "All fields are required." });
+  }
 
-// Post API
-// -- add body-parser package include as a middleware
-// app.use(bodyParser.json());
-user.post("/", (req, res) => {
+  // Check for existing email
   connection.execute(
-    "insert into user_info (u_first_name,u_last_name,u_email,u_password,is_verified,is_admin) values (?,?,?,?,?,?)",
-    [
-      req.body.u_first_name,
-      req.body.u_last_name,
-      req.body.u_email,
-      req.body.u_password,
-      req.body.is_verified,
-      req.body.is_admin,
-    ],
-    function (error, result) {
-      if (error) {
-        res.json({ message: error.message });
+    "SELECT * FROM user_information WHERE u_email = ?",
+    [email],
+    async (err, results) => {
+      if (err) return res.status(500).json({ message: err.message });
+      if (results.length > 0) {
+        return res.status(400).json({ message: "Email already registered." });
       }
+
+      // Encrypt password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Insert user
+      connection.execute(
+        "INSERT INTO user_information (u_first_name, u_last_name, u_email, u_password, is_verified, is_admin) VALUES (?, ?, ?, ?, ?, ?)",
+        [firstName, lastName, email, hashedPassword, 0, 0],
+        async (error, result) => {
+          if (error) return res.status(500).json({ message: error.message });
+
+          // Send verification email
+          const verifyLink = `http://localhost:8080/user/verify?email=${encodeURIComponent(email)}`;
+          await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: "Verify your email - Course Advising Portal",
+            html: `
+              <p>Hi ${firstName},</p>
+              <p>Click below to verify your account:</p>
+              <a href="${verifyLink}">${verifyLink}</a>
+            `,
+          });
+
+          res.status(201).json({
+            status: 201,
+            message: "User registered successfully! Please verify your email.",
+          });
+        }
+      );
+    }
+  );
+});
+
+// ✅ VERIFY EMAIL
+user.get("/verify", (req, res) => {
+  const { email } = req.query;
+
+  connection.execute(
+    "UPDATE user_information SET is_verified = 1 WHERE u_email = ?",
+    [email],
+    (error, result) => {
+      if (error) return res.status(500).json({ message: error.message });
+      res.send(`
+        <h2>Email verified successfully! You can now log in.</h2>
+        <a href="http://127.0.0.1:5500/cs418518-f25/Project/client/signin.html">Go to Login</a>
+      `);
+    }
+  );
+});
+
+// ✅ LOGIN with OTP
+user.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  // Check user exists
+  connection.execute(
+    "SELECT * FROM user_information WHERE u_email = ?",
+    [email],
+    async (error, result) => {
+      if (error) return res.status(500).json({ message: error.message });
+      if (result.length === 0)
+        return res.status(401).json({ message: "Invalid email or password" });
+
+      const user = result[0];
+      const match = await bcrypt.compare(password, user.u_password);
+
+      if (!match)
+        return res.status(401).json({ message: "Invalid password" });
+
+      if (!user.is_verified)
+        return res.status(403).json({ message: "Please verify your email first." });
+
+      // ✅ Generate OTP
+      const otp = Math.floor(100000 + Math.random() * 900000);
+
+      // Save OTP temporarily in DB
+      connection.execute(
+        "UPDATE user_information SET otp_code = ? WHERE u_email = ?",
+        [otp, email]
+      );
+
+      // ✅ Send OTP Email
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: "Your OTP Code - Course Advising Portal",
+        html: `<p>Hello ${user.u_first_name},</p>
+               <p>Your OTP code is: <strong>${otp}</strong></p>
+               <p>This code expires in 10 minutes.</p>`,
+      });
+
+      // ✅ Respond to frontend
       res.json({
-        status: "200",
-        message: "Response of post api",
-        result: result,
+        status: 200,
+        message: "OTP sent to email. Please verify.",
+        email: email,
       });
     }
   );
 });
 
-//PUT API
-user.put("/:id", (req, res) => {
+// ✅ VERIFY OTP
+user.post("/verify-otp", (req, res) => {
+  const { email, otp } = req.body;
+
   connection.execute(
-    "update user_info set u_first_name=?, u_last_name=? where u_id=?",
-    [req.body.u_first_name, req.body.u_last_name, req.params.id],
-    function (error, result) {
-      if (error) {
-        res.json({ message: error.message });
-      }
+    "SELECT * FROM user_information WHERE u_email = ? AND otp_code = ?",
+    [email, otp],
+    (error, result) => {
+      if (error) return res.status(500).json({ message: error.message });
+
+      if (result.length === 0)
+        return res.status(400).json({ message: "Invalid or expired OTP" });
+
+      // Clear OTP after success
+      connection.execute("UPDATE user_information SET otp_code = NULL WHERE u_email = ?", [email]);
+
       res.json({
-        status: "200",
-        message: "Response of put api",
-        result: result,
+        status: 200,
+        message: "OTP verified successfully",
       });
     }
   );
 });
 
-//Delete API
-user.delete("/:id", (req, res) => {
+
+
+// ✅ FORGOT PASSWORD
+user.post("/forgot-password", (req, res) => {
+  const { email } = req.body;
+
   connection.execute(
-    "delete from user_info where u_id=?",
-    [req.params.id],
-    function (error, result) {
-      if (error) {
-        res.json({ message: error.message });
-      }
-      res.json({
-        status: "200",
-        message: "Response of put api",
-        result: result,
+    "SELECT * FROM user_information WHERE u_email = ?",
+    [email],
+    async (error, result) => {
+      if (error) return res.status(500).json({ message: error.message });
+      if (result.length === 0)
+        return res.status(404).json({ message: "Email not found" });
+
+      const resetLink = `http://127.0.0.1:5500/cs418518-f25/Project/client/reset.html?email=${encodeURIComponent(
+        email
+      )}`;
+
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: "Password Reset - Course Advising Portal",
+        html: `<p>Click below to reset your password:</p>
+               <a href="${resetLink}">${resetLink}</a>`,
       });
+
+      res.json({ message: "Password reset email sent!" });
     }
   );
 });
 
-//Login API
-user.post("/login", (req, res) => {
+// ✅ RESET PASSWORD
+user.post("/reset-password", async (req, res) => {
+  const { email, newPassword } = req.body;
+  const hashed = await bcrypt.hash(newPassword, 10);
+
   connection.execute(
-    "select * from user_info where u_email=? and u_password=?",
-    [req.body.Email, req.body.Password],
-    function (error, result) {
-      if (error) {
-        res.json({ message: error.message });
-      }
-      if (result.length > 0) {
-        res.json({
-          status: "200",
-          message: "Response of post api",
-          result: result,
-        });
-      }
+    "UPDATE user_information SET u_password = ? WHERE u_email = ?",
+    [hashed, email],
+    (error, result) => {
+      if (error) return res.status(500).json({ message: error.message });
+      res.json({ message: "Password updated successfully!" });
     }
   );
 });

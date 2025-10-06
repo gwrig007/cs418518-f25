@@ -6,39 +6,33 @@ import user from "./route/user.js";
 const app = express();
 const port = 8080;
 
-// ✅ Start server
-app.listen(port, () => {
-  console.log(`Server is listening at port ${port}`);
-});
+// --- Middleware ---
+app.use(bodyParser.json());
 
-// ✅ Middleware example
-const myLogger = function (req, res, next) {
-  console.log("Calling middleware function");
-  next();
-};
-app.use(myLogger);
-
-// ✅ Enable CORS for your frontend
 app.use(
   cors({
-    origin: "http://localhost:5173", // frontend origin
+    origin: "http://127.0.0.1:5500", // or http://localhost:5173 if using Vite
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type"],
   })
 );
 
-// ✅ Parse incoming JSON
-app.use(bodyParser.json());
+const myLogger = (req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  next();
+};
+app.use(myLogger);
 
-// ✅ Use your user route (make sure route/user.js exists)
-app.use("/user", user);
+// --- Routes ---
+app.use("/user", user); // mount user routes
 
-// ✅ Example base route
 app.get("/", (req, res) => {
-  res.send("Response from GET API");
+  res.json({
+    status: 200,
+    message: "Server is running successfully 🚀",
+  });
 });
 
-// ✅ Example route handling all HTTP methods
 app.all("/test", (req, res) => {
   res.json({
     status: 200,
@@ -46,8 +40,9 @@ app.all("/test", (req, res) => {
   });
 });
 
-// ✅ Just a console test
-const a = 30;
-console.log(a);
+// --- Start server ---
+app.listen(port, () => {
+  console.log(`✅ Server is listening at port ${port}`);
+});
 
 export default app;
