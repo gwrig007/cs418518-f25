@@ -178,48 +178,62 @@ user.post("/reset-password", async (req, res) => {
   );
 });
 
-// ✅ GET USER PROFILE
+// 🟦 GET USER PROFILE
 user.get("/profile", (req, res) => {
-  const { email } = req.query;
+  const email = req.query.email;
 
-  if (!email) return res.status(400).json({ message: "Email is required." });
+  if (!email) {
+    return res.status(400).json({ message: "Email is required." });
+  }
 
-  connection.execute(
-    "SELECT u_first_name, u_last_name, u_email, u_password FROM user_information WHERE u_email = ?",
-    [email],
-    (error, result) => {
-      if (error) return res.status(500).json({ message: error.message });
-      if (result.length === 0)
-        return res.status(404).json({ message: "User not found." });
+  const sql = `
+    SELECT u_first_name AS firstName,
+           u_last_name AS lastName,
+           u_email AS email,
+           u_password AS password
+    FROM user_information
+    WHERE u_email = ?
+  `;
 
-      res.json(result[0]);
+  connection.execute(sql, [email], (err, results) => {
+    if (err) {
+      console.error("Error fetching profile:", err);
+      return res.status(500).json({ message: "Error fetching profile." });
     }
-  );
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    res.json(results[0]);
+  });
 });
 
-// ✅ UPDATE USER PROFILE (EXCEPT EMAIL)
-user.put("/profile", async (req, res) => {
+// 🟩 UPDATE PROFILE
+user.put("/update-profile", (req, res) => {
   const { email, firstName, lastName, password } = req.body;
 
-  if (!email)
-    return res.status(400).json({ message: "Email is required for update." });
+  if (!email) {
+    return res.status(400).json({ message: "Email is required." });
+  }
 
-  const hashedPassword = password
-    ? await bcrypt.hash(password, 10)
-    : undefined;
+  const sql = `
+    UPDATE user_information
+    SET u_first_name = ?, u_last_name = ?, u_password = ?
+    WHERE u_email = ?
+  `;
 
-  let query =
-    "UPDATE user_information SET u_first_name = ?, u_last_name = ?" +
-    (hashedPassword ? ", u_password = ?" : "") +
-    " WHERE u_email = ?";
+  connection.execute(sql, [firstName, lastName, password, email], (err, result) => {
+    if (err) {
+      console.error("Error updating profile:", err);
+      return res.status(500).json({ message: "Error updating profile." });
+    }
 
-  const params = hashedPassword
-    ? [firstName, lastName, hashedPassword, email]
-    : [firstName, lastName, email];
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "User not found." });
+    }
 
-  connection.execute(query, params, (error) => {
-    if (error) return res.status(500).json({ message: error.message });
-    res.json({ message: "Profile updated successfully." });
+    res.status(200).json({ message: "Profile updated successfully!" });
   });
 });
 
