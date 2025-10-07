@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 
 const user = Router();
 
+
 // Email Transporter (Gmail)
 const transporter = nodemailer.createTransport({
   service: "gmail",
