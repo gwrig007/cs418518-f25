@@ -1,0 +1,104 @@
+/* ======= Global Page Style ======= */
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background-color: #ffffff; /* white background */
+  color: #00205B; /* ODU navy blue text */
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ======= Main Container ======= */
+.container {
+  background-color: #ffffff;
+  border: 3px solid #c5a900; /* gold trim */
+  border-radius: 12px;
+  padding: 40px 50px;
+  box-shadow: 0 6px 20px rgba(0, 32, 91, 0.2);
+  text-align: center;
+  width: 90%;
+  max-width: 420px;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+/* ======= Headings ======= */
+h1, h2, h3 {
+  color: #00205B;
+  margin-bottom: 15px;
+}
+
+p {
+  color: #333333;
+  font-size: 15px;
+  margin-bottom: 25px;
+}
+
+/* ======= Buttons ======= */
+button {
+  background-color: #00205B;
+  color: white;
+  border: 2px solid #c5a900;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 16px;
+  cursor: pointer;
+  margin: 10px;
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  background-color: #c5a900;
+  color: #00205B;
+  transform: scale(1.05);
+}
+
+/* ======= Links ======= */
+.link {
+  display: block;
+  margin-top: 20px;
+  color: #00205B;
+  text-decoration: none;
+  font-weight: bold;
+  transition: color 0.3s ease;
+}
+
+.link:hover {
+  color: #c5a900;
+  text-decoration: underline;
+}
+
+/* ======= Inputs & Forms ======= */
+input, select, textarea {
+  width: 90%;
+  padding: 10px;
+  margin: 10px 0;
+  border: 2px solid #c5a900;
+  border-radius: 6px;
+  outline: none;
+  font-size: 15px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #00205B;
+  box-shadow: 0 0 6px rgba(0, 32, 91, 0.3);
+}
+
+/* ======= Animations ======= */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ======= Responsive ======= */
+@media (max-width: 600px) {
+  .container {
+    padding: 30px 20px;
+  }
+
+  button {
+    width: 100%;
+  }
+}
