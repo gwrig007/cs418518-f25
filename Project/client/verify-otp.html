@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verify OTP | ODU Course Advising Portal</title>
+  <link rel="stylesheet" href="../style.css" />
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      margin: 0;
+      background: linear-gradient(to bottom right, #f4f6fa, #e2e8f0);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+      width: 400px;
+      text-align: center;
+    }
+
+    h1 {
+      color: #003366;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #555;
+      margin-bottom: 25px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+      margin-bottom: 20px;
+    }
+
+    button {
+      background-color: #003366;
+      color: white;
+      border: none;
+      padding: 12px;
+      width: 100%;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #00509e;
+    }
+
+    #otpMessage {
+      margin-bottom: 15px;
+      font-weight: 500;
+      text-align: center;
+      color: red;
+    }
+
+    .link {
+      margin-top: 15px;
+      display: block;
+      color: #007bff;
+      text-decoration: none;
+    }
+
+    .link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Enter OTP</h1>
+    <p>Check your email for the OTP code.</p>
+
+    <form id="otpForm">
+      <div id="otpMessage"></div>
+      <input type="text" id="otp" placeholder="Enter OTP" required />
+      <button type="submit">Verify OTP</button>
+    </form>
+
+    <a href="signin.html" class="link">Back to Sign In</a>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const form = document.getElementById("otpForm");
+      const messageBox = document.getElementById("otpMessage");
+
+      const email = sessionStorage.getItem("pendingEmail");
+      if (!email) {
+        messageBox.textContent = "⚠️ Session expired. Please sign in again.";
+        setTimeout(() => window.location.href = "./signin.html", 2000);
+        return;
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const otp = document.getElementById("otp").value.trim();
+        if (!otp) {
+          messageBox.textContent = "⚠️ Please enter the OTP.";
+          return;
+        }
+
+        try {
+          const response = await fetch("http://localhost:8080/user/verify-otp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, otp }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            messageBox.textContent = data.message || "❌ Invalid OTP.";
+            return;
+          }
+
+         // Store email and role
+localStorage.setItem("userEmail", email);
+localStorage.setItem("isAdmin", data.isAdmin); // <--- ADD THIS LINE
+sessionStorage.removeItem("pendingEmail");
+
+// Redirect based on admin status
+if (data.isAdmin) {
+  window.location.href = "./admin.html";
+} else {
+  window.location.href = "./home.html";
+}
+
+
+        } catch (err) {
+          console.error("OTP verify error:", err);
+          messageBox.textContent = "⚠️ Server error. Please try again.";
+        }
+      });
+    });
+  </script>
+</body>
+</html>

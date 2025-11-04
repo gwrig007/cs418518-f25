@@ -1,7 +1,27 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import { resolve } from "path";
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
-})
+  root: ".", // your client folder is the root
+  build: {
+    outDir: "dist",
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, "index.html"),
+        signin: resolve(__dirname, "signin.html"),
+        signup: resolve(__dirname, "signup.html"),
+        home: resolve(__dirname, "home.html"),
+        profile: resolve(__dirname, "profile.html"),
+        reset: resolve(__dirname, "reset.html"),
+        forgot: resolve(__dirname, "forgot.html"),
+        verifyOtp: resolve(__dirname, "verify-otp.html"),
+        admin: resolve(__dirname, "admin.html"),
+        changePass: resolve(__dirname, "change-password.html"),
+      },
+    },
+  },
+  server: {
+    https: true,
+    port: 5173,
+  },
+});

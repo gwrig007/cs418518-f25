@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   try {
     // Fetch user data from backend
-    const res = await fetch(`http://localhost:8080/user/profile?email=${email}`);
+    const res = await fetch(`https://odu-advising-server.onrender.com/user/profile?email=${email}`);
     const data = await res.json();
 
     if (res.ok) {

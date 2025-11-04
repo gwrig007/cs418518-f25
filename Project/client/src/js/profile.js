@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 🟦 Fetch current user info
   try {
-    const res = await fetch(`http://localhost:8080/user/profile?email=${email}`);
+   const res = await fetch(`https://odu-advising-server.onrender.com/user/profile?email=${email}`);
     const data = await res.json();
 
     if (res.ok) {
@@ -38,11 +38,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     try {
-      const res = await fetch("http://localhost:8080/user/update-profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedProfile),
-      });
+      const res = await fetch("https://odu-advising-server.onrender.com/user/update-profile", {
+  method: "PUT",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(updatedProfile),
+});
 
       const data = await res.json();
 
