@@ -4,28 +4,27 @@ import bodyParser from "body-parser";
 import user from "./route/user.js";
 
 const app = express();
-const port = 8080;
 
 // --- Middleware ---
 app.use(bodyParser.json());
-
 app.use(
   cors({
-    origin: "http://127.0.0.1:5500", // or http://localhost:5173 if using Vite
+    origin: "*", // allow all origins for now (Render frontend will use HTTPS)
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type"],
   })
 );
 
-const myLogger = (req, res, next) => {
+// Simple logger
+app.use((req, res, next) => {
   console.log(`${req.method} ${req.url}`);
   next();
-};
-app.use(myLogger);
+});
 
 // --- Routes ---
-app.use("/user", user); // mount user routes
+app.use("/user", user);
 
+// Root route
 app.get("/", (req, res) => {
   res.json({
     status: 200,
@@ -33,16 +32,10 @@ app.get("/", (req, res) => {
   });
 });
 
-app.all("/test", (req, res) => {
-  res.json({
-    status: 200,
-    message: "Response from ALL API",
-  });
-});
-
-// --- Start server ---
+// --- Step 4: START SERVER ---
+const port = process.env.PORT || 8080; // ✅ required for Render
 app.listen(port, () => {
-  console.log(`✅ Server is listening at port ${port}`);
+  console.log(`✅ Server running on port ${port}`);
 });
 
 export default app;
