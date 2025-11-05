@@ -5,32 +5,33 @@ import user from "./route/user.js";
 
 const app = express();
 
-// ✅ Force CORS headers for all routes
-const allowedOrigin = "https://oduadvisingportal.netlify.app";
+// ✅ CORS Configuration
+const allowedOrigins = [
+  "https://oduadvisingportal.netlify.app",
+  "http://localhost:5500",
+  "http://127.0.0.1:5500",
+];
 
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", allowedOrigin);
-  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-  next();
-});
-
-// ✅ Also use CORS middleware (belt + suspenders)
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: function (origin, callback) {
+      // Allow no origin (like Postman or direct curl)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS not allowed for this origin"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
 
-// ✅ JSON + body parser
+// ✅ Middleware
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// ✅ Basic logger
+// ✅ Logger
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.url}`);
   next();
@@ -39,14 +40,21 @@ app.use((req, res, next) => {
 // ✅ Routes
 app.use("/user", user);
 
-// ✅ Root health check
+// ✅ Health check
 app.get("/", (req, res) => {
   res.json({ message: "Server is running 🚀" });
 });
 
-// ✅ Catch-all fallback (still keeps CORS headers)
+// ✅ Global error handler (prevents Render 502 crash)
+app.use((err, req, res, next) => {
+  console.error("🔥 Server error:", err.message);
+  res
+    .status(500)
+    .json({ message: "Internal server error", error: err.message });
+});
+
+// ✅ Catch-all 404 route
 app.use((req, res) => {
-  res.header("Access-Control-Allow-Origin", allowedOrigin);
   res.status(404).json({ message: "Route not found" });
 });
 
