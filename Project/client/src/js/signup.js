@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-   const res = await fetch("https://odu-advising-server.onrender.com/user/register", {
+   const res = await fetch("https://cs418518-f25-z4ax.onrender.com/user/register", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(user),

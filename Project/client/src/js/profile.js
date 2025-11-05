@@ -38,7 +38,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     try {
-      const res = await fetch("https://odu-advising-server.onrender.com/user/update-profile", {
+      const res = await fetch("https://cs418518-f25-z4ax.onrender.com/user/update-profile", {
   method: "PUT",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(updatedProfile),

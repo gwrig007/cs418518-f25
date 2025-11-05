@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const email = document.getElementById("email").value;
 
     try {
-      const res = await fetch("https://odu-advising-server.onrender.com/user/forgot-password", {
+      const res = await fetch("https://cs418518-f25-z4ax.onrender.com/user/forgot-password", {
    method: "POST",
    headers: { "Content-Type": "application/json" },
    body: JSON.stringify({ email }),
