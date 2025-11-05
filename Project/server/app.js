@@ -5,58 +5,53 @@ import user from "./route/user.js";
 
 const app = express();
 
-// ✅ Middleware to parse JSON and form data
-app.use(express.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// ✅ Force CORS headers for all routes
+const allowedOrigin = "https://oduadvisingportal.netlify.app";
 
-// ✅ Allow your frontend domain (Netlify)
-app.use(
-  cors({
-    origin: "https://oduadvisingportal.netlify.app",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  })
-);
-
-// ✅ Handle OPTIONS preflight requests cleanly
 app.use((req, res, next) => {
-  res.header(
-    "Access-Control-Allow-Origin",
-    "https://oduadvisingportal.netlify.app"
-  );
-  res.header(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, DELETE, OPTIONS"
-  );
+  res.header("Access-Control-Allow-Origin", allowedOrigin);
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
+    return res.status(200).end();
   }
   next();
 });
 
-// ✅ Simple request logger (for debugging)
+// ✅ Also use CORS middleware (belt + suspenders)
+app.use(
+  cors({
+    origin: allowedOrigin,
+    credentials: true,
+  })
+);
+
+// ✅ JSON + body parser
+app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// ✅ Basic logger
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.url}`);
   next();
 });
 
-// ✅ Register routes
+// ✅ Routes
 app.use("/user", user);
 
-// ✅ Root route (for Render health check)
+// ✅ Root health check
 app.get("/", (req, res) => {
-  res.json({
-    status: 200,
-    message: "Server is running successfully 🚀",
-  });
+  res.json({ message: "Server is running 🚀" });
 });
 
-// ✅ Start the server
-const port = process.env.PORT || 8080;
-app.listen(port, () => {
-  console.log(`✅ Server running on port ${port}`);
+// ✅ Catch-all fallback (still keeps CORS headers)
+app.use((req, res) => {
+  res.header("Access-Control-Allow-Origin", allowedOrigin);
+  res.status(404).json({ message: "Route not found" });
 });
+
+// ✅ Start server
+const port = process.env.PORT || 8080;
+app.listen(port, () => console.log(`✅ Server running on port ${port}`));
 
 export default app;

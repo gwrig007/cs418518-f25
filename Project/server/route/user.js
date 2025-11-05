@@ -151,7 +151,7 @@ user.get("/verify-email", (req, res) => {
    ================================ */
 user.post("/signin", async (req, res) => {
   const { email, password } = req.body;
-
+console.log('Received signin:', req.body);
   connection.execute(
     "SELECT * FROM user_information WHERE u_email = ?",
     [email],
