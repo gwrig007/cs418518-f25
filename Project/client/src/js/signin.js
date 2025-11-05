@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-     const response = await fetch("https://odu-advising-server.onrender.com/user/signin", {
+     const response = await fetch("https://cs418518-f25-1.onrender.com/user/signin", {
    method: "POST",
    headers: { "Content-Type": "application/json" },
    body: JSON.stringify({ email, password }),
