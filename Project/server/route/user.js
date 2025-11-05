@@ -77,7 +77,7 @@ user.post("/register", async (req, res) => {
         async (error) => {
           if (error) return res.status(500).json({ message: error.message });
 
-         const verifyLink = `https://cs418518-f25-1.onrender.com/user/verify-email?token=${verificationToken}`;
+         const verifyLink = `https://cs418518-f25-z4ax.onrender.com/user/verify-email?token=${verificationToken}`;
 
 
           await transporter.sendMail({

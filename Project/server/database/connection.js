@@ -1,11 +1,18 @@
-import 'dotenv/config';
-import mysql from 'mysql2';
+import mysql from "mysql2";
+import dotenv from "dotenv";
 
-const connection=mysql.createConnection({
-    host:process.env.DB_HOST,//'127.0.0.1',//localhost
-    user:process.env.DB_USER,//'root',
-    password:process.env.DB_PASSWORD,//'123456789',
-    database:process.env.DB_DATABASE//'course_advising'
-})
+dotenv.config();
 
-export { connection };
+export const connection = mysql.createConnection({
+  host: process.env.DB_HOST,       // ✅ use Clever Cloud
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE,
+});
+connection.connect((err) => {
+  if (err) {
+    console.error("❌ Database connection failed:", err);
+  } else {
+    console.log("✅ Connected to Clever Cloud MySQL!");
+  }
+});
