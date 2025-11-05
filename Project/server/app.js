@@ -5,23 +5,29 @@ import user from "./route/user.js";
 
 const app = express();
 
-// ✅ Allow your frontend domain
+// ✅ Middleware to parse JSON requests
+app.use(bodyParser.json()); // or app.use(express.json());
+
+// ✅ Allow both local dev + Netlify frontend
 app.use(cors({
-  origin: "https://oduadvisingportal.netlify.app",
+  origin: [
+    "https://oduadvisingportal.netlify.app",
+    "http://localhost:5173",  // for local Vite testing
+  ],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
 }));
 
-// Simple logger
+// ✅ Simple logger
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.url}`);
   next();
 });
 
-// --- Routes ---
+// ✅ User routes
 app.use("/user", user);
 
-// Root route
+// ✅ Root route for testing
 app.get("/", (req, res) => {
   res.json({
     status: 200,
@@ -29,8 +35,8 @@ app.get("/", (req, res) => {
   });
 });
 
-// --- Step 4: START SERVER ---
-const port = process.env.PORT || 8080; // ✅ required for Render
+// ✅ Start the server (Render will use this port)
+const port = process.env.PORT || 8080;
 app.listen(port, () => {
   console.log(`✅ Server running on port ${port}`);
 });
