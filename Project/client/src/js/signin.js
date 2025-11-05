@@ -14,34 +14,32 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-     const response = await fetch("https://cs418518-f25-z4ax.onrender.com/user/signin", {
-   method: "POST",
-   headers: { "Content-Type": "application/json" },
-   body: JSON.stringify({ email, password }),
-});
-
+      const response = await fetch("https://cs418518-f25-z4ax.onrender.com/user/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
       const data = await response.json();
 
-      if (!response.ok || data.status !== 200) {
+      if (!response.ok) {
         showMessage(data.message || "❌ Login failed.", "error");
         return;
       }
 
-      // Store email for OTP verification
+      // ✅ Save info for OTP verification
       sessionStorage.setItem("pendingEmail", email);
       sessionStorage.setItem("isAdmin", data.isAdmin);
 
       showMessage("✅ OTP sent to your email. Redirecting...", "success");
 
-      // Redirect to OTP page
+      // ✅ Redirect to OTP page
       setTimeout(() => {
         window.location.href = "./verify-otp.html";
       }, 2000);
-      
     } catch (err) {
       console.error("Signin error:", err);
-      showMessage("⚠️ Server error. Please try again.", "error");
+      showMessage("⚠️ Server error. Please try again later.", "error");
     }
   });
 
