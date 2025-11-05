@@ -13,7 +13,7 @@ const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    pass: process.env.EMAIL_PASS, // your Gmail App Password
   },
 });
 
@@ -77,19 +77,23 @@ user.post("/register", async (req, res) => {
         async (error) => {
           if (error) return res.status(500).json({ message: error.message });
 
-          const verifyLink = `http://localhost:8080/user/verify-email?token=${verificationToken}`;
+          const verifyLink = `https://cs418518-f25-z4ax.onrender.com/user/verify-email?token=${verificationToken}`;
 
-          await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: "Verify Your Email - Course Advising Portal",
-            html: `
-              <p>Hi ${firstName},</p>
-              <p>Welcome! Please verify your email by clicking below:</p>
-              <a href="${verifyLink}" target="_blank">Verify My Email</a>
-              <p>If you did not register, please ignore this message.</p>
-            `,
-          });
+          try {
+            await transporter.sendMail({
+              from: process.env.EMAIL_USER,
+              to: email,
+              subject: "Verify Your Email - Course Advising Portal",
+              html: `
+                <p>Hi ${firstName},</p>
+                <p>Welcome! Please verify your email by clicking below:</p>
+                <a href="${verifyLink}" target="_blank">Verify My Email</a>
+                <p>If you did not register, please ignore this message.</p>
+              `,
+            });
+          } catch (mailErr) {
+            console.error("⚠️ Failed to send verification email:", mailErr.message);
+          }
 
           res.status(201).json({
             message: "✅ Account created! Check your email to verify your account.",
@@ -127,7 +131,7 @@ user.get("/verify-email", (req, res) => {
           res.send(`
             <html>
               <head>
-                <meta http-equiv="refresh" content="3;url=http://127.0.0.1:5500/cs418518-f25/Project/client/html/signin.html" />
+                <meta http-equiv="refresh" content="3;url=https://oduadvisingportal.netlify.app/signin.html" />
                 <style>
                   body { font-family: Arial, sans-serif; text-align: center; margin-top: 100px; }
                   h2 { color: #2e7d32; }
@@ -146,10 +150,11 @@ user.get("/verify-email", (req, res) => {
 });
 
 /* ================================
-   SIGN IN (OTP REQUIRED FOR ALL)
+   SIGN IN (OTP)
    ================================ */
 user.post("/signin", async (req, res) => {
   const { email, password } = req.body;
+  console.log("Received signin:", req.body);
 
   connection.execute(
     "SELECT * FROM user_information WHERE u_email = ?",
@@ -163,29 +168,29 @@ user.post("/signin", async (req, res) => {
       const match = await bcrypt.compare(password, userInfo.u_password);
       if (!match) return res.status(401).json({ message: "Invalid password." });
 
-      if (userInfo.is_verified === 0) {
-        return res.status(403).json({
-          message: "Please verify your email before logging in.",
-        });
-      }
+      if (userInfo.is_verified === 0)
+        return res.status(403).json({ message: "Please verify your email first." });
 
-      // ✅ Generate OTP for ALL users (including admin)
       const otp = Math.floor(100000 + Math.random() * 900000);
-      connection.execute("UPDATE user_information SET otp_code = ? WHERE u_email = ?", [
-        otp,
-        email,
-      ]);
+      connection.execute(
+        "UPDATE user_information SET otp_code = ? WHERE u_email = ?",
+        [otp, email]
+      );
 
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: "Your OTP Code - Course Advising Portal",
-        html: `
-          <p>Hello ${userInfo.u_first_name},</p>
-          <p>Your OTP code is: <strong>${otp}</strong></p>
-          <p>This code will expire in 10 minutes.</p>
-        `,
-      });
+      try {
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: email,
+          subject: "Your OTP Code - Course Advising Portal",
+          html: `
+            <p>Hello ${userInfo.u_first_name || "User"},</p>
+            <p>Your OTP code is: <strong>${otp}</strong></p>
+            <p>This code will expire in 10 minutes.</p>
+          `,
+        });
+      } catch (mailErr) {
+        console.error("❌ OTP email failed:", mailErr.message);
+      }
 
       res.status(200).json({
         message: "OTP sent to your email. Please verify.",
@@ -211,9 +216,10 @@ user.post("/verify-otp", (req, res) => {
         return res.status(400).json({ message: "Invalid or expired OTP." });
 
       const userInfo = result[0];
-      connection.execute("UPDATE user_information SET otp_code = NULL WHERE u_email = ?", [
-        email,
-      ]);
+      connection.execute(
+        "UPDATE user_information SET otp_code = NULL WHERE u_email = ?",
+        [email]
+      );
 
       res.status(200).json({
         message: "✅ OTP verified successfully. Login successful.",
@@ -237,19 +243,21 @@ user.post("/forgot-password", (req, res) => {
       if (result.length === 0)
         return res.status(404).json({ message: "Email not found." });
 
-      const resetLink = `http://127.0.0.1:5500/cs418518-f25/Project/client/html/reset.html?email=${encodeURIComponent(
-        email
-      )}`;
+      const resetLink = `https://oduadvisingportal.netlify.app/reset.html?email=${encodeURIComponent(email)}`;
 
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: "Password Reset - Course Advising Portal",
-        html: `
-          <p>Click below to reset your password:</p>
-          <a href="${resetLink}">${resetLink}</a>
-        `,
-      });
+      try {
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: email,
+          subject: "Password Reset - Course Advising Portal",
+          html: `
+            <p>Click below to reset your password:</p>
+            <a href="${resetLink}">${resetLink}</a>
+          `,
+        });
+      } catch (mailErr) {
+        console.error("⚠️ Password reset email failed:", mailErr.message);
+      }
 
       res.json({ message: "Password reset email sent!" });
     }

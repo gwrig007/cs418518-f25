@@ -1,58 +1,65 @@
-// ==============================
-// ODU Course Advising Portal Backend
-// ==============================
-
 import express from "express";
 import cors from "cors";
-import https from "https";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-// ====== Path setup ======
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import bodyParser from "body-parser";
+import user from "./route/user.js";
 
 const app = express();
 
-// ====== Middleware ======
-app.use(cors());
+// ✅ CORS Configuration
+const allowedOrigins = [
+  "https://oduadvisingportal.netlify.app",
+  "http://localhost:5500",
+  "http://127.0.0.1:5500",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow no origin (like Postman or direct curl)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS not allowed for this origin"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+  })
+);
+
+// ✅ Middleware
 app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// ====== Example API route ======
-app.get("/user/profile", (req, res) => {
-  const { email } = req.query;
-  if (!email) return res.status(400).json({ message: "Email required" });
-
-  // Example mock response
-  res.json({
-    u_first_name: "Grace",
-    u_last_name: "Wright",
-    email: email,
-  });
+// ✅ Logger
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  next();
 });
 
-// ====== Example POST route ======
-app.post("/user/register", (req, res) => {
-  const { firstName, lastName, email, password } = req.body;
+// ✅ Routes
+app.use("/user", user);
 
-  if (!email || !password) {
-    return res.status(400).json({ message: "Missing required fields" });
-  }
-
-  console.log("New user registered:", firstName, lastName, email);
-  res.json({ message: "✅ User registered successfully!" });
+// ✅ Health check
+app.get("/", (req, res) => {
+  res.json({ message: "Server is running 🚀" });
 });
 
-// ====== HTTPS configuration ======
-const options = {
-  key: fs.readFileSync(path.join(__dirname, "certs", "key.pem")),
-  cert: fs.readFileSync(path.join(__dirname, "certs", "cert.pem")),
-};
-
-// ====== Start server ======
-const PORT = 8080;
-
-https.createServer(options, app).listen(PORT, () => {
-  console.log(`✅ HTTPS Server running at https://localhost:${PORT}`);
+// ✅ Global error handler (prevents Render 502 crash)
+app.use((err, req, res, next) => {
+  console.error("🔥 Server error:", err.message);
+  res
+    .status(500)
+    .json({ message: "Internal server error", error: err.message });
 });
+
+// ✅ Catch-all 404 route
+app.use((req, res) => {
+  res.status(404).json({ message: "Route not found" });
+});
+
+// ✅ Start server
+const port = process.env.PORT || 8080;
+app.listen(port, () => console.log(`✅ Server running on port ${port}`));
+
+export default app;
