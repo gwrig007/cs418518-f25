@@ -77,8 +77,7 @@ user.post("/register", async (req, res) => {
         async (error) => {
           if (error) return res.status(500).json({ message: error.message });
 
-         const verifyLink = `https://cs418518-f25-1.onrender.com/user/verify-email?token=${verificationToken}`;
-
+          const verifyLink = `http://localhost:8080/user/verify-email?token=${verificationToken}`;
 
           await transporter.sendMail({
             from: process.env.EMAIL_USER,
@@ -128,7 +127,7 @@ user.get("/verify-email", (req, res) => {
           res.send(`
             <html>
               <head>
-                <meta http-equiv="refresh" content= "3;url=https://oduadvisingportal.netlify.app/signin.html" />
+                <meta http-equiv="refresh" content="3;url=http://127.0.0.1:5500/cs418518-f25/Project/client/html/signin.html" />
                 <style>
                   body { font-family: Arial, sans-serif; text-align: center; margin-top: 100px; }
                   h2 { color: #2e7d32; }
@@ -238,8 +237,9 @@ user.post("/forgot-password", (req, res) => {
       if (result.length === 0)
         return res.status(404).json({ message: "Email not found." });
 
-  const resetLink = `https://oduadvisingportal.netlify.app/reset.html?email=${encodeURIComponent(email)}`;
-
+      const resetLink = `http://127.0.0.1:5500/cs418518-f25/Project/client/html/reset.html?email=${encodeURIComponent(
+        email
+      )}`;
 
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
