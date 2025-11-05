@@ -1,51 +1,55 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("verifyOtpForm");
-  const messageBox = document.getElementById("verifyMessage");
-  const email = sessionStorage.getItem("pendingEmail");
+  const verifyBtn = document.getElementById("verifyBtn");
+  const otpInput = document.getElementById("otp");
+  const message = document.getElementById("message");
 
-  if (!email) {
-    showMessage("❌ Missing email session. Please sign in again.", "error");
-    setTimeout(() => (window.location.href = "./signin.html"), 2000);
+  // Retrieve phone number stored from signin
+  const phone = localStorage.getItem("userPhone");
+
+  if (!phone) {
+    message.textContent = "⚠️ No phone number found. Please sign in again.";
+    verifyBtn.disabled = true;
     return;
   }
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const otp = document.getElementById("otp").value.trim();
+  verifyBtn.addEventListener("click", async () => {
+    const otp = otpInput.value.trim();
 
     if (!otp) {
-      showMessage("⚠️ Please enter the OTP.", "error");
+      message.textContent = "Please enter your OTP.";
       return;
     }
+
+    message.textContent = "Verifying...";
 
     try {
       const response = await fetch("https://cs418518-f25-z4ax.onrender.com/user/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp }),
+        body: JSON.stringify({ phone, otp }),
       });
 
       const data = await response.json();
 
-      if (!response.ok) {
-        showMessage(data.message || "❌ Invalid OTP.", "error");
-        return;
+      if (response.ok) {
+        message.textContent = data.message;
+        localStorage.setItem("userEmail", data.email);
+        localStorage.setItem("isAdmin", data.isAdmin);
+
+        // Redirect to home or admin page
+        setTimeout(() => {
+          if (data.isAdmin) {
+            window.location.href = "admin.html";
+          } else {
+            window.location.href = "home.html";
+          }
+        }, 1500);
+      } else {
+        message.textContent = `❌ ${data.message}`;
       }
-
-      showMessage("✅ Login successful! Redirecting...", "success");
-
-      setTimeout(() => {
-        const isAdmin = sessionStorage.getItem("isAdmin") === "true";
-        window.location.href = isAdmin ? "./admin.html" : "./dashboard.html";
-      }, 1500);
-    } catch (err) {
-      console.error("Verify OTP error:", err);
-      showMessage("⚠️ Server error. Please try again.", "error");
+    } catch (error) {
+      console.error("Error verifying OTP:", error);
+      message.textContent = "⚠️ Server error. Please try again.";
     }
   });
-
-  function showMessage(msg, type) {
-    messageBox.textContent = msg;
-    messageBox.style.color = type === "success" ? "green" : "red";
-  }
 });

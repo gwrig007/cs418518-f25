@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       // ✅ Save info for OTP verification
-      sessionStorage.setItem("pendingEmail", email);
+     sessionStorage.setItem("pendingPhone", phone);
       sessionStorage.setItem("isAdmin", data.isAdmin);
 
       showMessage("✅ OTP sent to your email. Redirecting...", "success");

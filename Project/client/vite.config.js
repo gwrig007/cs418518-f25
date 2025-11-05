@@ -1,27 +1,24 @@
-import { defineConfig } from "vite";
-import { resolve } from "path";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verify OTP</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="container">
+    <h2>📱 Verify Your Phone</h2>
+    <p>We’ve sent a 6-digit verification code to your phone number.</p>
 
-export default defineConfig({
-  root: ".", // your client folder is the root
-  build: {
-    outDir: "dist",
-    rollupOptions: {
-      input: {
-        main: resolve(__dirname, "index.html"),
-        signin: resolve(__dirname, "signin.html"),
-        signup: resolve(__dirname, "signup.html"),
-        home: resolve(__dirname, "home.html"),
-        profile: resolve(__dirname, "profile.html"),
-        reset: resolve(__dirname, "reset.html"),
-        forgot: resolve(__dirname, "forgot.html"),
-        verifyOtp: resolve(__dirname, "verify-otp.html"),
-        admin: resolve(__dirname, "admin.html"),
-        changePass: resolve(__dirname, "change-password.html"),
-      },
-    },
-  },
-  server: {
-    https: true,
-    port: 5173,
-  },
-});
+    <form id="otpForm">
+      <input type="text" id="otp" maxlength="6" placeholder="Enter OTP" required />
+      <button type="submit">Verify</button>
+    </form>
+
+    <p id="otpMessage"></p>
+  </div>
+
+  <script src="./verify-otp.js"></script>
+</body>
+</html>

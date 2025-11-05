@@ -1,21 +1,10 @@
 import { Router } from "express";
 import { connection } from "../database/connection.js";
-import nodemailer from "nodemailer";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
+import sendOtpSMS from "../utils/sms.js";
 
 const user = Router();
-
-/* ================================
-   EMAIL TRANSPORTER (GMAIL)
-   ================================ */
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // your Gmail App Password
-  },
-});
 
 /* ================================
    ENSURE ADMIN USER EXISTS
@@ -36,8 +25,8 @@ const ensureAdminUser = () => {
       if (results.length === 0) {
         const hashed = await bcrypt.hash(adminPassword, 10);
         connection.execute(
-          "INSERT INTO user_information (u_first_name, u_last_name, u_email, u_password, is_verified, is_admin) VALUES (?, ?, ?, ?, ?, ?)",
-          ["System", "Admin", adminEmail, hashed, 1, 1],
+          "INSERT INTO user_information (u_first_name, u_last_name, u_email, u_password, is_verified, is_admin, phone) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          ["System", "Admin", adminEmail, hashed, 1, 1, "+10000000000"],
           (insertErr) => {
             if (insertErr) console.error("⚠️ Failed to create admin:", insertErr);
             else console.log("✅ Admin user created (admin@odu.edu / Admin@123)");
@@ -55,48 +44,74 @@ ensureAdminUser();
    REGISTER (Sign-Up)
    ================================ */
 user.post("/register", async (req, res) => {
-  const { firstName, lastName, email, password } = req.body;
+  const { firstName, lastName, email, password, phone } = req.body;
 
-  if (!firstName || !lastName || !email || !password)
+  if (!firstName || !lastName || !email || !password || !phone)
     return res.status(400).json({ message: "All fields are required." });
+
+  connection.execute(
+    "SELECT * FROM user_information WHERE u_email = ? OR phone = ?",
+    [email, phone],
+    async (err, results) => {
+      if (err) return res.status(500).json({ message: err.message });
+      if (results.length > 0)
+        return res.status(400).json({ message: "Email or phone already registered." });
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      connection.execute(
+        "INSERT INTO user_information (u_first_name, u_last_name, u_email, u_password, phone, is_verified, is_admin) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [firstName, lastName, email, hashedPassword, phone, 1, 0],
+        (error) => {
+          if (error) return res.status(500).json({ message: error.message });
+          res.status(201).json({ message: "✅ Account created successfully!" });
+        }
+      );
+    }
+  );
+});
+
+/* ================================
+   SIGN IN (Send OTP via SMS)
+   ================================ */
+user.post("/signin", async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password)
+    return res.status(400).json({ message: "Email and password are required." });
 
   connection.execute(
     "SELECT * FROM user_information WHERE u_email = ?",
     [email],
     async (err, results) => {
-      if (err) return res.status(500).json({ message: err.message });
-      if (results.length > 0)
-        return res.status(400).json({ message: "Email already registered." });
+      if (err) return res.status(500).json({ message: "Database error." });
+      if (results.length === 0)
+        return res.status(404).json({ message: "❌ No user found." });
 
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const verificationToken = crypto.randomBytes(32).toString("hex");
+      const user = results[0];
+      const isMatch = await bcrypt.compare(password, user.u_password);
+      if (!isMatch) return res.status(401).json({ message: "Incorrect password." });
+
+      // Generate OTP
+      const otp = Math.floor(100000 + Math.random() * 900000);
+      const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
       connection.execute(
-        "INSERT INTO user_information (u_first_name, u_last_name, u_email, u_password, is_verified, verification_token, is_admin) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [firstName, lastName, email, hashedPassword, 0, verificationToken, 0],
-        async (error) => {
-          if (error) return res.status(500).json({ message: error.message });
+        "UPDATE user_information SET otp = ?, otpExpires = ? WHERE u_email = ?",
+        [otp, otpExpires, email],
+        async (updateErr) => {
+          if (updateErr)
+            return res.status(500).json({ message: "Error saving OTP." });
 
-          const verifyLink = `https://cs418518-f25-z4ax.onrender.com/user/verify-email?token=${verificationToken}`;
+          const smsSent = await sendOtpSMS(user.phone, otp);
+          if (!smsSent)
+            return res.status(500).json({ message: "Failed to send OTP via SMS." });
 
-          try {
-            await transporter.sendMail({
-              from: process.env.EMAIL_USER,
-              to: email,
-              subject: "Verify Your Email - Course Advising Portal",
-              html: `
-                <p>Hi ${firstName},</p>
-                <p>Welcome! Please verify your email by clicking below:</p>
-                <a href="${verifyLink}" target="_blank">Verify My Email</a>
-                <p>If you did not register, please ignore this message.</p>
-              `,
-            });
-          } catch (mailErr) {
-            console.error("⚠️ Failed to send verification email:", mailErr.message);
-          }
-
-          res.status(201).json({
-            message: "✅ Account created! Check your email to verify your account.",
+          res.status(200).json({
+            status: 200,
+            message: "✅ OTP sent via SMS.",
+            isAdmin: user.is_admin,
+            phone: user.phone,
           });
         }
       );
@@ -105,161 +120,62 @@ user.post("/register", async (req, res) => {
 });
 
 /* ================================
-   VERIFY EMAIL
-   ================================ */
-user.get("/verify-email", (req, res) => {
-  const { token } = req.query;
-
-  if (!token)
-    return res.status(400).send("<h3>❌ Invalid request — missing token.</h3>");
-
-  connection.execute(
-    "SELECT * FROM user_information WHERE verification_token = ?",
-    [token],
-    (err, results) => {
-      if (err) return res.status(500).send("<h3>⚠️ Database error.</h3>");
-      if (results.length === 0)
-        return res.status(400).send("<h3>❌ Invalid or expired token.</h3>");
-
-      connection.execute(
-        "UPDATE user_information SET is_verified = 1, verification_token = NULL WHERE verification_token = ?",
-        [token],
-        (updateErr) => {
-          if (updateErr)
-            return res.status(500).send("<h3>⚠️ Error verifying email.</h3>");
-
-          res.send(`
-            <html>
-              <head>
-                <meta http-equiv="refresh" content="3;url=https://oduadvisingportal.netlify.app/signin.html" />
-                <style>
-                  body { font-family: Arial, sans-serif; text-align: center; margin-top: 100px; }
-                  h2 { color: #2e7d32; }
-                </style>
-              </head>
-              <body>
-                <h2>✅ Email Verified Successfully!</h2>
-                <p>Redirecting to sign-in page...</p>
-              </body>
-            </html>
-          `);
-        }
-      );
-    }
-  );
-});
-
-/* ================================
-   SIGN IN (OTP)
-   ================================ */
-user.post("/signin", async (req, res) => {
-  const { email, password } = req.body;
-  console.log("Received signin:", req.body);
-
-  connection.execute(
-    "SELECT * FROM user_information WHERE u_email = ?",
-    [email],
-    async (error, result) => {
-      if (error) return res.status(500).json({ message: error.message });
-      if (result.length === 0)
-        return res.status(401).json({ message: "Invalid email or password." });
-
-      const userInfo = result[0];
-      const match = await bcrypt.compare(password, userInfo.u_password);
-      if (!match) return res.status(401).json({ message: "Invalid password." });
-
-      if (userInfo.is_verified === 0)
-        return res.status(403).json({ message: "Please verify your email first." });
-
-      const otp = Math.floor(100000 + Math.random() * 900000);
-      connection.execute(
-        "UPDATE user_information SET otp_code = ? WHERE u_email = ?",
-        [otp, email]
-      );
-
-      try {
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: email,
-          subject: "Your OTP Code - Course Advising Portal",
-          html: `
-            <p>Hello ${userInfo.u_first_name || "User"},</p>
-            <p>Your OTP code is: <strong>${otp}</strong></p>
-            <p>This code will expire in 10 minutes.</p>
-          `,
-        });
-      } catch (mailErr) {
-        console.error("❌ OTP email failed:", mailErr.message);
-      }
-
-      res.status(200).json({
-        message: "OTP sent to your email. Please verify.",
-        email,
-        isAdmin: userInfo.is_admin === 1,
-      });
-    }
-  );
-});
-
-/* ================================
    VERIFY OTP
    ================================ */
 user.post("/verify-otp", (req, res) => {
-  const { email, otp } = req.body;
+  const { phone, otp } = req.body;
+
+  if (!phone || !otp)
+    return res.status(400).json({ message: "Phone number and OTP are required." });
 
   connection.execute(
-    "SELECT * FROM user_information WHERE u_email = ? AND otp_code = ?",
-    [email, otp],
-    (error, result) => {
-      if (error) return res.status(500).json({ message: error.message });
-      if (result.length === 0)
+    "SELECT * FROM user_information WHERE phone = ? AND otp = ? AND otpExpires > NOW()",
+    [phone, otp],
+    (err, results) => {
+      if (err) return res.status(500).json({ message: "Database error." });
+      if (results.length === 0)
         return res.status(400).json({ message: "Invalid or expired OTP." });
 
-      const userInfo = result[0];
+      // Clear OTP
       connection.execute(
-        "UPDATE user_information SET otp_code = NULL WHERE u_email = ?",
-        [email]
+        "UPDATE user_information SET otp = NULL, otpExpires = NULL WHERE phone = ?",
+        [phone]
       );
 
       res.status(200).json({
-        message: "✅ OTP verified successfully. Login successful.",
-        isAdmin: userInfo.is_admin === 1,
+        message: "✅ OTP verified successfully!",
+        email: results[0].u_email,
+        isAdmin: results[0].is_admin,
       });
     }
   );
 });
 
 /* ================================
-   FORGOT PASSWORD
+   FORGOT PASSWORD (SMS LINK)
    ================================ */
-user.post("/forgot-password", (req, res) => {
-  const { email } = req.body;
+user.post("/forgot-password", async (req, res) => {
+  const { phone } = req.body;
 
   connection.execute(
-    "SELECT * FROM user_information WHERE u_email = ?",
-    [email],
+    "SELECT * FROM user_information WHERE phone = ?",
+    [phone],
     async (error, result) => {
       if (error) return res.status(500).json({ message: error.message });
       if (result.length === 0)
-        return res.status(404).json({ message: "Email not found." });
+        return res.status(404).json({ message: "Phone not found." });
 
-      const resetLink = `https://oduadvisingportal.netlify.app/reset.html?email=${encodeURIComponent(email)}`;
+      const resetCode = Math.floor(100000 + Math.random() * 900000);
+      const resetExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
 
-      try {
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: email,
-          subject: "Password Reset - Course Advising Portal",
-          html: `
-            <p>Click below to reset your password:</p>
-            <a href="${resetLink}">${resetLink}</a>
-          `,
-        });
-      } catch (mailErr) {
-        console.error("⚠️ Password reset email failed:", mailErr.message);
-      }
-
-      res.json({ message: "Password reset email sent!" });
+      connection.execute(
+        "UPDATE user_information SET otp = ?, otpExpires = ? WHERE phone = ?",
+        [resetCode, resetExpires, phone],
+        async () => {
+          await sendOtpSMS(phone, resetCode);
+          res.json({ message: "Reset code sent via SMS." });
+        }
+      );
     }
   );
 });
@@ -268,15 +184,25 @@ user.post("/forgot-password", (req, res) => {
    RESET PASSWORD
    ================================ */
 user.post("/reset-password", async (req, res) => {
-  const { email, newPassword } = req.body;
+  const { phone, otp, newPassword } = req.body;
   const hashed = await bcrypt.hash(newPassword, 10);
 
   connection.execute(
-    "UPDATE user_information SET u_password = ? WHERE u_email = ?",
-    [hashed, email],
-    (error) => {
+    "SELECT * FROM user_information WHERE phone = ? AND otp = ? AND otpExpires > NOW()",
+    [phone, otp],
+    (error, result) => {
       if (error) return res.status(500).json({ message: error.message });
-      res.json({ message: "Password updated successfully!" });
+      if (result.length === 0)
+        return res.status(400).json({ message: "Invalid or expired OTP." });
+
+      connection.execute(
+        "UPDATE user_information SET u_password = ?, otp = NULL, otpExpires = NULL WHERE phone = ?",
+        [hashed, phone],
+        (err) => {
+          if (err) return res.status(500).json({ message: err.message });
+          res.json({ message: "✅ Password reset successfully!" });
+        }
+      );
     }
   );
 });
@@ -289,7 +215,7 @@ user.get("/profile", (req, res) => {
   if (!email) return res.status(400).json({ message: "Email is required." });
 
   connection.execute(
-    "SELECT u_first_name AS firstName, u_last_name AS lastName, u_email AS email, is_admin AS isAdmin FROM user_information WHERE u_email = ?",
+    "SELECT u_first_name AS firstName, u_last_name AS lastName, u_email AS email, phone, is_admin AS isAdmin FROM user_information WHERE u_email = ?",
     [email],
     (err, results) => {
       if (err) return res.status(500).json({ message: "Error fetching profile." });
