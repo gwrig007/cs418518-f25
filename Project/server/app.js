@@ -5,29 +5,30 @@ import user from "./route/user.js";
 
 const app = express();
 
-// ✅ Middleware to parse JSON requests
-app.use(bodyParser.json()); // or app.use(express.json());
+// ✅ FIX: Allow Netlify frontend domain for all routes
+app.use(
+  cors({
+    origin: [
+      "https://oduadvisingportal.netlify.app",
+      "https://www.oduadvisingportal.netlify.app"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
 
-// ✅ Allow both local dev + Netlify frontend
-app.use(cors({
-  origin: [
-    "https://oduadvisingportal.netlify.app",
-    "http://localhost:5173",  // for local Vite testing
-  ],
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true,
-}));
+// ✅ Handle preflight requests globally
+app.options("*", cors());
 
-// ✅ Simple logger
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
-  next();
-});
+// ✅ Parse JSON and form data
+app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// ✅ User routes
+// --- Routes ---
 app.use("/user", user);
 
-// ✅ Root route for testing
+// Root route
 app.get("/", (req, res) => {
   res.json({
     status: 200,
@@ -35,7 +36,7 @@ app.get("/", (req, res) => {
   });
 });
 
-// ✅ Start the server (Render will use this port)
+// --- Start Server ---
 const port = process.env.PORT || 8080;
 app.listen(port, () => {
   console.log(`✅ Server running on port ${port}`);
