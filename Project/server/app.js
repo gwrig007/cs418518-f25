@@ -5,15 +5,12 @@ import user from "./route/user.js";
 
 const app = express();
 
-// --- Middleware ---
-app.use(bodyParser.json());
-app.use(
-  cors({
-    origin: "*", // allow all origins for now (Render frontend will use HTTPS)
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type"],
-  })
-);
+// ✅ Allow your frontend domain
+app.use(cors({
+  origin: "https://oduadvisingportal.netlify.app",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true,
+}));
 
 // Simple logger
 app.use((req, res, next) => {
