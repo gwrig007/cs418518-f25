@@ -5,61 +5,52 @@ import user from "./route/user.js";
 
 const app = express();
 
-// ✅ CORS Configuration
-const allowedOrigins = [
-  "https://oduadvisingportal.netlify.app",
-  "http://localhost:5500",
-  "http://127.0.0.1:5500",
-];
+// ✅ Use Render’s assigned port, fallback to 8080 for local dev
+const PORT = process.env.PORT || 8080;
 
+// --- Middleware ---
+app.use(bodyParser.json());
+
+// ✅ Allow both local dev and deployed frontend
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // Allow no origin (like Postman or direct curl)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("CORS not allowed for this origin"));
-      }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    credentials: true,
+    origin: [
+      "http://127.0.0.1:5500",      // local dev
+      "http://localhost:5173",      // Vite dev server
+      "https://your-frontend-domain.netlify.app", // 🔁 replace with your deployed frontend if you have one
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type"],
   })
 );
 
-// ✅ Middleware
-app.use(express.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// ✅ Logger
-app.use((req, res, next) => {
+// --- Simple request logger ---
+const myLogger = (req, res, next) => {
   console.log(`${req.method} ${req.url}`);
   next();
-});
+};
+app.use(myLogger);
 
-// ✅ Routes
-app.use("/user", user);
+// --- Routes ---
+app.use("/user", user); // mount user routes
 
-// ✅ Health check
 app.get("/", (req, res) => {
-  res.json({ message: "Server is running 🚀" });
+  res.json({
+    status: 200,
+    message: "Server is running successfully 🚀",
+  });
 });
 
-// ✅ Global error handler (prevents Render 502 crash)
-app.use((err, req, res, next) => {
-  console.error("🔥 Server error:", err.message);
-  res
-    .status(500)
-    .json({ message: "Internal server error", error: err.message });
+app.all("/test", (req, res) => {
+  res.json({
+    status: 200,
+    message: "Response from ALL API",
+  });
 });
 
-// ✅ Catch-all 404 route
-app.use((req, res) => {
-  res.status(404).json({ message: "Route not found" });
+// --- Start server ---
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`✅ Server running on port ${PORT}`);
 });
-
-// ✅ Start server
-const port = process.env.PORT || 8080;
-app.listen(port, () => console.log(`✅ Server running on port ${port}`));
 
 export default app;
