@@ -1,25 +1,31 @@
+// utils/sms.js
 import twilio from "twilio";
 
-// Use your Twilio credentials from .env
-const client = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
+// ✅ Replace with your actual Twilio credentials
+const accountSid = process.env.TWILIO_ACCOUNT_SID || "YOUR_TWILIO_ACCOUNT_SID";
+const authToken = process.env.TWILIO_AUTH_TOKEN || "YOUR_TWILIO_AUTH_TOKEN";
+const twilioPhone = process.env.TWILIO_PHONE_NUMBER || "+1XXXXXXXXXX"; // Your Twilio phone number
+
+const client = twilio(accountSid, authToken);
 
 /**
- * Send a one-time passcode (OTP) via SMS
- * @param {string} phoneNumber - recipient's phone number in +1XXXXXXXXXX format
- * @param {string|number} otp - the one-time code to send
+ * Send OTP via SMS using Twilio
+ * @param {string} phone - The recipient phone number (in E.164 format, e.g. +15551234567)
+ * @param {string|number} otp - The one-time password code
+ * @returns {Promise<boolean>} - Returns true if sent successfully, false otherwise
  */
-export async function sendOtpSMS(phoneNumber, otp) {
+export default async function sendOtpSMS(phone, otp) {
   try {
-    await client.messages.create({
-      body: `Your Course Advising Portal verification code is: ${otp}`,
-      from: "+18777804236", // ✅ your new Twilio number
-      to: phoneNumber, // must include +1 and area code
+    const message = await client.messages.create({
+      body: `🔐 Your verification code is: ${otp}. It expires in 5 minutes.`,
+      from: twilioPhone,
+      to: phone,
     });
-    console.log(`✅ OTP sent to ${phoneNumber}`);
+
+    console.log("✅ OTP sent via Twilio:", message.sid);
+    return true;
   } catch (error) {
-    console.error("❌ OTP SMS failed:", error.message);
+    console.error("❌ Error sending OTP via Twilio:", error.message);
+    return false;
   }
 }
